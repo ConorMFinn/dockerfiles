@@ -1,6 +1,6 @@
 - name: Create a directory to hold the mirror of the external data.
   ansible.builtin.file:
-    path: /external-data/MD5/
+    path: /external_data_volume/MD5/
     state: directory
     mode: '0755'
 
@@ -14,16 +14,16 @@
   when: connected.stdout != "success"
 
 - name: Mirror the external data from the main server in a volume (this may take a while).
-  ansible.builtin.command: "rsync -az --perms -o -g {{ main_server_hostname }}:/srv/{{ main_data_srv_dir }}/ftp/external-data/MD5/ /external-data/MD5/"
+  ansible.builtin.command: "rsync -az --perms -o -g {{ main_server_hostname }}:/srv/{{ main_data_srv_dir }}/ftp/external-data/MD5/ {{ external_data_location }}/MD5/"
 
 - name: Copy the data update script onto the mirror machine.
-  ansible.builtin.copy:
-    src: ./update-external-data.sh
-    dest: /external-data/update-external-data.sh
+  ansible.builtin.template:
+    src: update-external-data.sh.j2
+    dest: "{{ external_data_location }}/update-external-data.sh"
     mode: '0755'
 
 - name: Create a crontab job that runs periodically to keep the data up to date.
   ansible.builtin.cron:
     name: Update external data
     minute: "*/5"
-    job: /external-data/update-external-data.sh {{ main_server_hostname }} {{ main_data_srv_dir }} >> /external-data/update-log.txt 2>&1
+    job: "{{ external_data_location }}/update-external-data.sh {{ main_server_hostname }} {{ main_data_srv_dir }} >> {{ external_data_location }}/update-log.txt 2>&1"
